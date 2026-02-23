@@ -1,261 +1,147 @@
 import { useState, useEffect } from 'react';
-import { openClawApi } from '../services/api';
 import './SettingsPage.css';
 
-const SECTION_ICONS = { gateway: '🔌', agents: '🤖', models: '🧠', auth: '🔐', advanced: '⚙️' };
-
-function ConfigSection({ title, icon, children }) {
-    const [open, setOpen] = useState(true);
-    return (
-        <div className="config-section glass-panel animate-fade-in">
-            <div className="config-section-header" onClick={() => setOpen(o => !o)}>
-                <span className="section-icon">{icon}</span>
-                <h3>{title}</h3>
-                <span className="chevron">{open ? '▾' : '▸'}</span>
-            </div>
-            {open && <div className="config-section-body">{children}</div>}
-        </div>
-    );
-}
-
-function ConfigRow({ label, hint, children }) {
-    return (
-        <div className="config-row">
-            <div className="config-label-group">
-                <span className="config-label">{label}</span>
-                {hint && <span className="config-hint">{hint}</span>}
-            </div>
-            <div className="config-control">{children}</div>
-        </div>
-    );
-}
-
-function ReadOnlyValue({ value }) {
-    return <span className="config-readonly">{value === undefined || value === null ? <em>not set</em> : String(value)}</span>;
-}
-
 export default function SettingsPage() {
-    const [config, setConfig] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [saveStatus, setSaveStatus] = useState(null); // null | 'saving' | 'saved' | 'error'
-    const [pendingPatch, setPendingPatch] = useState({});
+    const [settings, setSettings] = useState({
+        gatewayUrl: 'ws://127.0.0.1:18789',
+        password: 'qtclaw',
+        autoRefresh: true,
+        refreshInterval: 30
+    });
+    const [isEditing, setIsEditing] = useState(false);
+    const [hasChanges, setHasChanges] = useState(false);
 
-    const doFetch = () => {
-        setLoading(true);
-        openClawApi.fetchConfig()
-            .then(res => setConfig(res))
-            .catch(err => console.error('Config fetch failed:', err))
-            .finally(() => setLoading(false));
+    const handleSettingChange = (key, value) => {
+        setSettings(prev => ({ ...prev, [key]: value }));
+        setHasChanges(true);
+    };
+
+    const saveSettings = () => {
+        // Save to localStorage
+        try {
+            localStorage.setItem('openclaw_dashboard_settings', JSON.stringify(settings));
+            alert('Settings saved successfully!\n\nNote: Some changes may require a page reload to take effect.');
+            setHasChanges(false);
+        } catch (e) {
+            alert('Failed to save settings: ' + e.message);
+        }
+    };
+
+    const loadSettings = () => {
+        try {
+            const saved = localStorage.getItem('openclaw_dashboard_settings');
+            if (saved) {
+                setSettings(prev => ({ ...prev, ...JSON.parse(saved) }));
+            }
+        } catch (e) {
+            console.warn('Failed to load saved settings:', e);
+        }
     };
 
     useEffect(() => {
-        if (openClawApi.connected) doFetch();
-        const unsub = openClawApi.subscribe(d => {
-            if (d.type === 'connection_change' && d.connected) doFetch();
-        });
-        return () => unsub();
+        loadSettings();
     }, []);
-
-    const patch = (path, value) => {
-        // Build a nested patch object from a dot-separated path
-        const keys = path.split('.');
-        const update = {};
-        let cur = update;
-        keys.forEach((k, i) => {
-            if (i === keys.length - 1) cur[k] = value;
-            else { cur[k] = {}; cur = cur[k]; }
-        });
-        setPendingPatch(prev => deepMerge(prev, update));
-    };
-
-    const deepMerge = (base, overlay) => {
-        const out = { ...base };
-        Object.entries(overlay).forEach(([k, v]) => {
-            out[k] = (v && typeof v === 'object' && !Array.isArray(v) && base[k] && typeof base[k] === 'object')
-                ? deepMerge(base[k], v) : v;
-        });
-        return out;
-    };
-
-    const get = (path) => {
-        const keys = path.split('.');
-        let cur = config;
-        for (const k of keys) {
-            if (cur == null) return undefined;
-            cur = cur[k];
-        }
-        return cur;
-    };
-
-    const handleSave = async () => {
-        if (!Object.keys(pendingPatch).length) return;
-        setSaveStatus('saving');
-        try {
-            await openClawApi.patchConfig(pendingPatch);
-            setPendingPatch({});
-            setSaveStatus('saved');
-            doFetch();
-            setTimeout(() => setSaveStatus(null), 2000);
-        } catch (err) {
-            console.error('Config save failed:', err);
-            setSaveStatus('error');
-            setTimeout(() => setSaveStatus(null), 3000);
-        }
-    };
-
-    const hasPending = Object.keys(pendingPatch).length > 0;
-
-    if (loading && !config) {
-        return (
-            <div className="page-container settings-page">
-                <div className="loading-state animate-fade-in">
-                    <div className="loading-spinner" />Fetching configuration...
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div className="page-container settings-page">
             <header className="page-header">
-                <h1 className="animate-fade-in"><span className="text-gradient">System</span> Configuration</h1>
-                <p className="subtitle">Live gateway settings — changes apply immediately.</p>
+                <h1 className="animate-fade-in">Dashboard <span className="text-gradient">Settings</span></h1>
+                <p className="subtitle">Configure your OpenClaw Dashboard preferences.</p>
             </header>
 
-            {/* Save bar */}
-            {hasPending && (
-                <div className="save-bar animate-fade-in">
-                    <span>You have unsaved changes</span>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                        <button className="btn btn-ghost" onClick={() => setPendingPatch({})}>Discard</button>
-                        <button className="btn btn-primary" onClick={handleSave} disabled={saveStatus === 'saving'}>
-                            {saveStatus === 'saving' ? 'Saving...' : 'Save Changes'}
-                        </button>
+            <div className="settings-content">
+                <div className="settings-section glass-panel animate-fade-in">
+                    <h2 className="section-title">Gateway Connection</h2>
+                    
+                    <div className="setting-row">
+                        <label className="setting-label">
+                            Gateway URL:
+                            <input
+                                type="text"
+                                className="setting-input"
+                                value={settings.gatewayUrl}
+                                onChange={(e) => handleSettingChange('gatewayUrl', e.target.value)}
+                                placeholder="ws://127.0.0.1:18789"
+                            />
+                        </label>
+                        <p className="setting-help">WebSocket URL of your OpenClaw Gateway</p>
+                    </div>
+
+                    <div className="setting-row">
+                        <label className="setting-label">
+                            Gateway Password:
+                            <input
+                                type="password"
+                                className="setting-input"
+                                value={settings.password}
+                                onChange={(e) => handleSettingChange('password', e.target.value)}
+                                placeholder="Enter password"
+                            />
+                        </label>
+                        <p className="setting-help">Password for Gateway authentication</p>
                     </div>
                 </div>
-            )}
-            {saveStatus === 'saved' && !hasPending && (
-                <div className="save-bar save-bar-success animate-fade-in">✓ Configuration saved successfully.</div>
-            )}
-            {saveStatus === 'error' && (
-                <div className="save-bar save-bar-error animate-fade-in">✗ Failed to save. Check gateway logs.</div>
-            )}
 
-            {!config ? (
-                <div className="loading-state">
-                    No configuration data available. Verify the gateway connection and operator.admin scope.
-                </div>
-            ) : (
-                <div className="config-sections">
+                <div className="settings-section glass-panel animate-fade-in" style={{ animationDelay: '0.1s' }}>
+                    <h2 className="section-title">Display Preferences</h2>
+                    
+                    <div className="setting-row">
+                        <label className="setting-label checkbox-label">
+                            <input
+                                type="checkbox"
+                                className="setting-checkbox"
+                                checked={settings.autoRefresh}
+                                onChange={(e) => handleSettingChange('autoRefresh', e.target.checked)}
+                            />
+                            <span>Enable auto-refresh</span>
+                        </label>
+                        <p className="setting-help">Automatically refresh dashboard data</p>
+                    </div>
 
-                    <ConfigSection title="Gateway" icon={SECTION_ICONS.gateway}>
-                        <ConfigRow label="Gateway Version" hint="Read-only">
-                            <ReadOnlyValue value={config?.version} />
-                        </ConfigRow>
-                        <ConfigRow label="Hostname / Host" hint="Read-only">
-                            <ReadOnlyValue value={config?.host || config?.hostname} />
-                        </ConfigRow>
-                        <ConfigRow label="Port" hint="Listening port">
-                            <ReadOnlyValue value={config?.port || config?.gateway?.port} />
-                        </ConfigRow>
-                        <ConfigRow label="Auth Mode" hint="How clients authenticate">
-                            <ReadOnlyValue value={config?.authMode || config?.gateway?.authMode || config?.auth?.mode} />
-                        </ConfigRow>
-                        <ConfigRow label="Log Level" hint="Gateway log verbosity">
-                            <select className="config-select"
-                                defaultValue={get('logLevel') || get('gateway.logLevel') || 'info'}
-                                onChange={e => patch('logLevel', e.target.value)}>
-                                {['error', 'warn', 'info', 'debug'].map(v => <option key={v} value={v}>{v}</option>)}
-                            </select>
-                        </ConfigRow>
-                    </ConfigSection>
-
-                    <ConfigSection title="Agent Defaults" icon={SECTION_ICONS.agents}>
-                        <ConfigRow label="Default Model" hint="Model used when none is specified">
-                            <input className="config-input" type="text"
-                                defaultValue={get('agent.model') || get('agents.defaultModel') || ''}
-                                placeholder="e.g. gpt-4o"
-                                onBlur={e => patch('agent.model', e.target.value)} />
-                        </ConfigRow>
-                        <ConfigRow label="Max Tokens" hint="Response token limit">
-                            <input className="config-input" type="number"
-                                defaultValue={get('agent.maxTokens') || get('agents.maxTokens') || ''}
-                                placeholder="e.g. 4096"
-                                onBlur={e => patch('agent.maxTokens', Number(e.target.value))} />
-                        </ConfigRow>
-                        <ConfigRow label="Temperature" hint="Model creativity (0–2)">
-                            <input className="config-input" type="number" step="0.1" min="0" max="2"
-                                defaultValue={get('agent.temperature') || ''}
-                                placeholder="e.g. 0.7"
-                                onBlur={e => patch('agent.temperature', parseFloat(e.target.value))} />
-                        </ConfigRow>
-                        <ConfigRow label="System Prompt" hint="Default system prompt">
-                            <textarea className="config-textarea" rows={4}
-                                defaultValue={get('agent.systemPrompt') || get('agents.systemPrompt') || ''}
-                                placeholder="You are a helpful AI assistant..."
-                                onBlur={e => patch('agent.systemPrompt', e.target.value)} />
-                        </ConfigRow>
-                    </ConfigSection>
-
-                    <ConfigSection title="Model Providers" icon={SECTION_ICONS.models}>
-                        {['openai', 'anthropic', 'google', 'mistral', 'groq', 'ollama'].map(provider => {
-                            const keyPath = `providers.${provider}.apiKey`;
-                            const enabledPath = `providers.${provider}.enabled`;
-                            const isEnabled = get(enabledPath);
-                            return (
-                                <ConfigRow key={provider} label={provider.charAt(0).toUpperCase() + provider.slice(1)}
-                                    hint="API key + enable/disable">
-                                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                                        <input
-                                            className="config-input"
-                                            type="password"
-                                            placeholder={get(keyPath) ? '••••••••••••' : 'API Key'}
-                                            onBlur={e => e.target.value && patch(keyPath, e.target.value)}
-                                        />
-                                        <label className="toggle-label">
-                                            <input type="checkbox"
-                                                defaultChecked={isEnabled !== false}
-                                                onChange={e => patch(enabledPath, e.target.checked)}
-                                            />
-                                            <span className="toggle-track" />
-                                        </label>
-                                    </div>
-                                </ConfigRow>
-                            );
-                        })}
-                    </ConfigSection>
-
-                    <ConfigSection title="Security & Auth" icon={SECTION_ICONS.auth}>
-                        <ConfigRow label="Allowed Origins" hint="CORS origins (comma-separated)">
-                            <input className="config-input" type="text"
-                                defaultValue={(get('allowedOrigins') || []).join(', ')}
-                                placeholder="e.g. http://localhost:3000"
-                                onBlur={e => patch('allowedOrigins', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} />
-                        </ConfigRow>
-                        <ConfigRow label="Allow Tailscale" hint="Auto-trust tailnet addresses">
-                            <label className="toggle-label">
-                                <input type="checkbox"
-                                    defaultChecked={get('allowTailscale') || false}
-                                    onChange={e => patch('allowTailscale', e.target.checked)} />
-                                <span className="toggle-track" />
+                    {settings.autoRefresh && (
+                        <div className="setting-row">
+                            <label className="setting-label">
+                                Refresh interval (seconds):
+                                <input
+                                    type="number"
+                                    className="setting-input"
+                                    value={settings.refreshInterval}
+                                    onChange={(e) => handleSettingChange('refreshInterval', parseInt(e.target.value) || 30)}
+                                    min="5"
+                                    max="300"
+                                />
                             </label>
-                        </ConfigRow>
-                        <ConfigRow label="Max Payload (bytes)" hint="Max WS frame size">
-                            <input className="config-input" type="number"
-                                defaultValue={get('gateway.maxPayload') || ''}
-                                placeholder="e.g. 1048576"
-                                onBlur={e => patch('gateway.maxPayload', Number(e.target.value))} />
-                        </ConfigRow>
-                    </ConfigSection>
-
-                    <ConfigSection title="Raw Config" icon={SECTION_ICONS.advanced}>
-                        <div className="raw-config">
-                            <pre>{JSON.stringify(config, null, 2)}</pre>
+                            <p className="setting-help">How often to refresh data (5-300 seconds)</p>
                         </div>
-                    </ConfigSection>
-
+                    )}
                 </div>
-            )}
+
+                <div className="settings-section glass-panel animate-fade-in" style={{ animationDelay: '0.2s' }}>
+                    <h2 className="section-title">About</h2>
+                    <div className="about-section">
+                        <p><strong>OpenClaw Dashboard</strong> v1.0.0</p>
+                        <p>Web interface for monitoring and managing OpenClaw Gateway</p>
+                        <div className="links">
+                            <a href="https://github.com/tcevans/OpenClaw-Dashboard" target="_blank" rel="noopener noreferrer">
+                                GitHub Repository
+                            </a>
+                            <a href="https://docs.openclaw.ai" target="_blank" rel="noopener noreferrer">
+                                Documentation
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="settings-actions">
+                    <button 
+                        className={`btn-save ${hasChanges ? 'has-changes' : ''}`}
+                        onClick={saveSettings}
+                        disabled={!hasChanges}
+                    >
+                        {hasChanges ? '💾 Save Changes' : '✓ Saved'}
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }
