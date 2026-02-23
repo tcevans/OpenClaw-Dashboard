@@ -22,8 +22,8 @@ export default function OverviewPage() {
         setError(null);
         
         try {
-            // Fetch all data in parallel
-            const [agents, models, systemStatus] = await Promise.all([
+            // Fetch agents and models (system.status is not supported by Gateway yet)
+            const [agents, models] = await Promise.all([
                 openClawApi.fetchAgents().catch(err => {
                     console.warn('Failed to fetch agents:', err);
                     return { list: [] };
@@ -31,10 +31,6 @@ export default function OverviewPage() {
                 openClawApi.fetchModels().catch(err => {
                     console.warn('Failed to fetch models:', err);
                     return { providers: {} };
-                }),
-                openClawApi.fetchSystemStatus().catch(err => {
-                    console.warn('Failed to fetch system status:', err);
-                    return null;
                 })
             ]);
 
@@ -45,26 +41,13 @@ export default function OverviewPage() {
             const modelsCount = models?.providers ? 
                 Object.values(models.providers).reduce((acc, p) => acc + (p.models?.length || 0), 0) : 0;
 
-            // Parse system status (if available)
-            let uptime = '0h';
-            let requestsToday = 0;
-            let avgLatency = 0;
-            let status = 'Connected';
-            
-            if (systemStatus) {
-                status = systemStatus.status || 'Connected';
-                uptime = systemStatus.uptime || uptime;
-                requestsToday = systemStatus.requestsToday || 0;
-                avgLatency = systemStatus.avgLatency || 0;
-            }
-
             setStats({
                 agentsCount,
                 modelsCount,
-                systemStatus: status,
-                uptime,
-                requestsToday,
-                avgLatency
+                systemStatus: 'Connected',
+                uptime: '0h',
+                requestsToday: 0,
+                avgLatency: 0
             });
         } catch (e) {
             console.error("Failed to load overview data", e);
