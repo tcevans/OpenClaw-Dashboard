@@ -37,6 +37,12 @@
     border-radius: 8px;
     color: var(--text-muted);
     font-family: monospace;
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.activity-item:hover {
+    transform: translateX(5px);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .pulse {

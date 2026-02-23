@@ -73,9 +73,16 @@
     margin: 4px 0;
 }
 
+@keyframes fillWidth {
+    from {
+        width: 0%;
+    }
+}
+
 .token-fill {
     height: 100%;
     background: linear-gradient(90deg, var(--primary), var(--secondary));
     border-radius: 4px;
     box-shadow: 0 0 10px var(--primary-glow);
+    animation: fillWidth 1.5s cubic-bezier(0.1, 0, 0.2, 1) forwards;
 }

@@ -27,6 +27,13 @@
     align-items: center;
     justify-content: center;
     border-radius: 12px;
+    transition: all var(--transition-fast);
+}
+
+.agent-card:hover .agent-icon {
+    transform: scale(1.1);
+    background: rgba(69, 243, 255, 0.1);
+    box-shadow: 0 0 15px var(--primary-glow);
 }
 
 .status-badge {
