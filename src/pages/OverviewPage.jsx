@@ -7,35 +7,101 @@ export default function OverviewPage() {
     const [stats, setStats] = useState({
         agentsCount: 0,
         modelsCount: 0,
-        systemStatus: 'Unknown'
+        systemStatus: 'Connecting...',
+        uptime: '0h',
+        requestsToday: 0,
+        avgLatency: 0
     });
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    const fetchOverviewData = async () => {
+        if (!openClawApi.connected) return;
+        
+        setLoading(true);
+        setError(null);
+        
+        try {
+            // Fetch all data in parallel
+            const [agents, models, systemStatus] = await Promise.all([
+                openClawApi.fetchAgents().catch(err => {
+                    console.warn('Failed to fetch agents:', err);
+                    return { list: [] };
+                }),
+                openClawApi.fetchModels().catch(err => {
+                    console.warn('Failed to fetch models:', err);
+                    return { providers: {} };
+                }),
+                openClawApi.fetchSystemStatus().catch(err => {
+                    console.warn('Failed to fetch system status:', err);
+                    return null;
+                })
+            ]);
+
+            // Parse agents count
+            const agentsCount = Array.isArray(agents) ? agents.length : (agents?.list?.length || 0);
+            
+            // Parse models count
+            const modelsCount = models?.providers ? 
+                Object.values(models.providers).reduce((acc, p) => acc + (p.models?.length || 0), 0) : 0;
+
+            // Parse system status (if available)
+            let uptime = '0h';
+            let requestsToday = 0;
+            let avgLatency = 0;
+            let status = 'Connected';
+            
+            if (systemStatus) {
+                status = systemStatus.status || 'Connected';
+                uptime = systemStatus.uptime || uptime;
+                requestsToday = systemStatus.requestsToday || 0;
+                avgLatency = systemStatus.avgLatency || 0;
+            }
+
+            setStats({
+                agentsCount,
+                modelsCount,
+                systemStatus: status,
+                uptime,
+                requestsToday,
+                avgLatency
+            });
+        } catch (e) {
+            console.error("Failed to load overview data", e);
+            setError("Failed to load data. Please check connection.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        // Fetch initial data
-        const fetchOverviewData = async () => {
-            try {
-                const [agents, models] = await Promise.all([
-                    openClawApi.fetchAgents().catch(() => ({ list: [] })),
-                    openClawApi.fetchModels().catch(() => ({ providers: {} }))
-                ]);
-
-                // Very basic parsing, will be refined as we see real payloads from Gateway
-                let agentsCount = Array.isArray(agents) ? agents.length : (agents?.list?.length || 0);
-                let modelsCount = models?.providers ? Object.values(models.providers).reduce((acc, p) => acc + (p.models?.length || 0), 0) : 0;
-
-                setStats({
-                    agentsCount,
-                    modelsCount,
-                    systemStatus: 'Healthy'
-                });
-            } catch (e) {
-                console.error("Failed to load overview data", e);
+        // Initial data fetch
+        fetchOverviewData();
+        
+        // Subscribe to connection changes
+        const unsubscribe = openClawApi.subscribe((data) => {
+            if (data.type === 'connection_change') {
+                if (data.connected) {
+                    setStats(prev => ({ ...prev, systemStatus: 'Connected' }));
+                    fetchOverviewData();
+                } else {
+                    setStats(prev => ({ ...prev, systemStatus: 'Disconnected' }));
+                    setLoading(false);
+                }
             }
-        };
+        });
 
-        if (openClawApi.connected) {
-            fetchOverviewData();
-        }
+        // Set up periodic refresh (every 5 seconds)
+        const interval = setInterval(() => {
+            if (openClawApi.connected && !loading) {
+                fetchOverviewData();
+            }
+        }, 5000);
+
+        return () => {
+            unsubscribe();
+            clearInterval(interval);
+        };
     }, []);
 
     return (
@@ -43,43 +109,61 @@ export default function OverviewPage() {
             <header className="page-header">
                 <h1 className="animate-fade-in">System <span className="text-gradient">Overview</span></h1>
                 <p className="subtitle">Real-time metrics and system health.</p>
+                {loading && <div className="loading-indicator">📊 Loading data...</div>}
+                {error && <div className="error-message">❌ {error}</div>}
             </header>
 
             <div className="dashboard-grid">
                 <DashboardCard
                     title="Active Agents"
-                    value={stats.agentsCount || "5"}
+                    value={loading ? "..." : stats.agentsCount}
                     subtitle="All systems nominal"
                     icon="🤖"
                     delay={0.1}
                 />
                 <DashboardCard
                     title="Available Models"
-                    value={stats.modelsCount || "23"}
+                    value={loading ? "..." : stats.modelsCount}
                     subtitle="Across all providers"
                     icon="🧠"
                     delay={0.2}
                 />
                 <DashboardCard
                     title="Requests Today"
-                    value="1,284"
-                    subtitle="+14% from yesterday"
+                    value={loading ? "..." : stats.requestsToday.toLocaleString()}
+                    subtitle="Today's activity"
                     icon="⚡"
                     delay={0.3}
                 />
                 <DashboardCard
                     title="Avg Latency"
-                    value="124ms"
-                    subtitle="Optimal"
+                    value={loading ? "..." : `${stats.avgLatency}ms`}
+                    subtitle="Response time"
                     icon="📡"
                     delay={0.4}
                 />
             </div>
 
             <div className="main-panel glass-panel animate-fade-in" style={{ animationDelay: '0.5s', marginTop: '32px' }}>
-                <h2>Recent Activity Stream</h2>
-                <div className="activity-placeholder">
-                    <div className="activity-item pulse">Loading realtime logs...</div>
+                <h2>Connection Status</h2>
+                <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '8px',
+                    padding: '20px',
+                    fontSize: '18px'
+                }}>
+                    <span style={{ 
+                        width: '12px', 
+                        height: '12px', 
+                        borderRadius: '50%', 
+                        backgroundColor: stats.systemStatus === 'Connected' ? '#4ade80' : '#ef4444',
+                        boxShadow: `0 0 8px ${stats.systemStatus === 'Connected' ? '#4ade80' : '#ef4444'}`
+                    }}></span>
+                    <span>{stats.systemStatus}</span>
+                    {stats.uptime && stats.systemStatus === 'Connected' && (
+                        <span style={{ marginLeft: 'auto', opacity: 0.7 }}>Uptime: {stats.uptime}</span>
+                    )}
                 </div>
             </div>
         </div>
