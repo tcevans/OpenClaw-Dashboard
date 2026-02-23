@@ -7,84 +7,35 @@ export default function OverviewPage() {
     const [stats, setStats] = useState({
         agentsCount: 0,
         modelsCount: 0,
-        systemStatus: 'Connecting...',
-        uptime: '0h',
-        requestsToday: 0,
-        avgLatency: 0
+        systemStatus: 'Unknown'
     });
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-
-    const fetchOverviewData = async () => {
-        if (!openClawApi.connected) return;
-        
-        setLoading(true);
-        setError(null);
-        
-        try {
-            // Fetch agents and models (system.status is not supported by Gateway yet)
-            const [agents, models] = await Promise.all([
-                openClawApi.fetchAgents().catch(err => {
-                    console.warn('Failed to fetch agents:', err);
-                    return { list: [] };
-                }),
-                openClawApi.fetchModels().catch(err => {
-                    console.warn('Failed to fetch models:', err);
-                    return { providers: {} };
-                })
-            ]);
-
-            // Parse agents count
-            const agentsCount = Array.isArray(agents) ? agents.length : (agents?.list?.length || 0);
-            
-            // Parse models count
-            const modelsCount = models?.providers ? 
-                Object.values(models.providers).reduce((acc, p) => acc + (p.models?.length || 0), 0) : 0;
-
-            setStats({
-                agentsCount,
-                modelsCount,
-                systemStatus: 'Connected',
-                uptime: '0h',
-                requestsToday: 0,
-                avgLatency: 0
-            });
-        } catch (e) {
-            console.error("Failed to load overview data", e);
-            setError("Failed to load data. Please check connection.");
-        } finally {
-            setLoading(false);
-        }
-    };
 
     useEffect(() => {
-        // Initial data fetch
-        fetchOverviewData();
-        
-        // Subscribe to connection changes
-        const unsubscribe = openClawApi.subscribe((data) => {
-            if (data.type === 'connection_change') {
-                if (data.connected) {
-                    setStats(prev => ({ ...prev, systemStatus: 'Connected' }));
-                    fetchOverviewData();
-                } else {
-                    setStats(prev => ({ ...prev, systemStatus: 'Disconnected' }));
-                    setLoading(false);
-                }
-            }
-        });
+        // Fetch initial data
+        const fetchOverviewData = async () => {
+            try {
+                const [agents, models] = await Promise.all([
+                    openClawApi.fetchAgents().catch(() => ({ list: [] })),
+                    openClawApi.fetchModels().catch(() => ({ providers: {} }))
+                ]);
 
-        // Set up periodic refresh (every 5 seconds)
-        const interval = setInterval(() => {
-            if (openClawApi.connected && !loading) {
-                fetchOverviewData();
-            }
-        }, 5000);
+                // Very basic parsing, will be refined as we see real payloads from Gateway
+                let agentsCount = Array.isArray(agents) ? agents.length : (agents?.list?.length || 0);
+                let modelsCount = models?.providers ? Object.values(models.providers).reduce((acc, p) => acc + (p.models?.length || 0), 0) : 0;
 
-        return () => {
-            unsubscribe();
-            clearInterval(interval);
+                setStats({
+                    agentsCount,
+                    modelsCount,
+                    systemStatus: 'Healthy'
+                });
+            } catch (e) {
+                console.error("Failed to load overview data", e);
+            }
         };
+
+        if (openClawApi.connected) {
+            fetchOverviewData();
+        }
     }, []);
 
     return (
