@@ -23,7 +23,8 @@ export default function AgentsPage() {
                 console.log('[AgentsPage] fetchAgents response:', response);
                 
                 // Parse response - handle different formats
-                const agentList = Array.isArray(response) ? response : (response?.list || []);
+                // Gateway returns: { agents: [...], defaultId, mainKey, scope }
+                const agentList = Array.isArray(response) ? response : (response?.agents || response?.list || []);
                 
                 setAgents(agentList);
             } catch (err) {
