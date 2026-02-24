@@ -85,17 +85,37 @@ export default function AgentsPage() {
                             
                             <div className="agent-details">
                                 <div className="detail-row">
+                                    <span className="detail-label">Status:</span>
+                                    <span className={`detail-value status-${agent.status || 'idle'}`}>
+                                        {agent.status || (agent.lastActivity ? 'Running' : 'Idle')}
+                                    </span>
+                                </div>
+                                <div className="detail-row">
                                     <span className="detail-label">Model:</span>
-                                    <span className="detail-value">{agent.model || 'default'}</span>
+                                    <span className="detail-value">{agent.model || agent.config?.model || 'default'}</span>
                                 </div>
                                 <div className="detail-row">
                                     <span className="detail-label">Default:</span>
-                                    <span className="detail-value">{agent.default ? 'Yes' : 'No'}</span>
+                                    <span className="detail-value">{agent.default ? '✓ Yes' : 'No'}</span>
                                 </div>
                                 <div className="detail-row">
                                     <span className="detail-label">Workspace:</span>
                                     <span className="detail-value">{agent.workspace || 'Not set'}</span>
                                 </div>
+                                {agent.lastActivity && (
+                                    <div className="detail-row">
+                                        <span className="detail-label">Last Activity:</span>
+                                        <span className="detail-value">
+                                            {new Date(agent.lastActivity).toLocaleString()}
+                                        </span>
+                                    </div>
+                                )}
+                                {agent.sessions && (
+                                    <div className="detail-row">
+                                        <span className="detail-label">Active Sessions:</span>
+                                        <span className="detail-value">{agent.sessions}</span>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="agent-actions">

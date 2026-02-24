@@ -169,6 +169,22 @@
     font-weight: 500;
 }
 
+/* Status indicators */
+.detail-value.status-running {
+    color: #4ade80;
+    font-weight: 600;
+}
+
+.detail-value.status-idle {
+    color: #fbbf24;
+    font-weight: 600;
+}
+
+.detail-value.status-error {
+    color: #ef4444;
+    font-weight: 600;
+}
+
 /* Agent Actions */
 .agent-actions {
     margin-top: 20px;
