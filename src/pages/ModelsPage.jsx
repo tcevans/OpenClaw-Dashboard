@@ -142,6 +142,7 @@ export default function ModelsPage() {
                             key={cat}
                             className={`cat-tab ${category === cat ? 'active' : ''}`}
                             onClick={() => setCategory(cat)}
+                            aria-pressed={category === cat}
                         >
                             {CAT_LABELS[cat] || cat}
                             {cat === 'in use' && inUseIds.size > 0 && <span className="cat-badge">{inUseIds.size}</span>}
@@ -155,13 +156,28 @@ export default function ModelsPage() {
                         placeholder="🔍 Search models..."
                         value={search}
                         onChange={e => setSearch(e.target.value)}
+                        aria-label="Search models"
+                        title="Search models"
                     />
-                    <select className="sort-select" value={sort} onChange={e => setSort(e.target.value)}>
+                    <select
+                        className="sort-select"
+                        value={sort}
+                        onChange={e => setSort(e.target.value)}
+                        aria-label="Sort models"
+                        title="Sort models"
+                    >
                         <option value="provider">Sort: Provider</option>
                         <option value="name">Sort: Name</option>
                         <option value="context">Sort: Context Window</option>
                     </select>
-                    <button className="btn btn-primary" onClick={doFetch}>↻</button>
+                    <button
+                        className="btn btn-primary"
+                        onClick={doFetch}
+                        aria-label="Refresh models list"
+                        title="Refresh models list"
+                    >
+                        ↻
+                    </button>
                 </div>
             </div>
 
