@@ -52,7 +52,7 @@ const events = [
 
 export default function CalendarPage() {
   const theme = useTheme();
-  const [myEvents, setEvents] = useState(events);
+  const [myEvents] = useState(events);
 
   return (
     <Box sx={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>

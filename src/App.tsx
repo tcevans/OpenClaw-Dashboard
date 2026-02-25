@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -54,20 +54,9 @@ const darkTheme = createTheme({
 });
 
 function App() {
-  const [connected, setConnected] = useState(false);
-
   useEffect(() => {
     // Initial connect
     openClawApi.connect();
-
-    // Subscribe to connection changes
-    const unsubscribe = openClawApi.subscribe((data: any) => {
-      if (data.type === 'connection_change') {
-        setConnected(data.connected);
-      }
-    });
-
-    return () => { unsubscribe(); };
   }, []);
 
   return (

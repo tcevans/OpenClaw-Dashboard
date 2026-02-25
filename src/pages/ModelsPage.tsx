@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -16,11 +16,10 @@ import {
   useTheme
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import ModelTrainingIcon from '@mui/icons-material/ModelTraining';
 import MemoryIcon from '@mui/icons-material/Memory';
 import { openClawApi, Model } from '../services/api';
 
-const PROVIDER_META = {
+const PROVIDER_META: Record<string, { label: string; color: string }> = {
     openai: { label: 'OpenAI', color: '#10a37f' },
     anthropic: { label: 'Anthropic', color: '#d4a574' },
     google: { label: 'Google', color: '#4285f4' },
@@ -44,7 +43,6 @@ export default function ModelsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('provider');
-  const [category, setCategory] = useState('all');
 
   useEffect(() => {
     const fetchModels = async () => {
