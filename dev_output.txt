@@ -1,0 +1,14 @@
+
+> openclaw-dashboard@0.0.0 dev
+> vite
+
+
+  VITE v7.3.1  ready in 367 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+2:58:17 PM [vite] changed tsconfig file detected: /app/tsconfig.json - Clearing cache and forcing full-reload to ensure TypeScript is compiled with updated config values.
+2:58:17 PM [vite] changed tsconfig file detected: /app/tsconfig.json - Clearing cache and forcing full-reload to ensure TypeScript is compiled with updated config values.
+2:59:38 PM [vite] (client) page reload index.html
+3:10:13 PM [vite] (client) ✨ new dependencies optimized: react-router-dom, @mui/material/styles, @mui/material/CssBaseline, @mui/material, @mui/icons-material/SmartToy, @mui/icons-material/PlayArrow, @mui/icons-material/Stop, @mui/icons-material/Settings, @mui/icons-material/Search, @mui/icons-material/Memory, react-big-calendar, date-fns, date-fns/locale, @mui/material/Box, @mui/material/Drawer, @mui/material/AppBar, @mui/material/Toolbar, @mui/material/List, @mui/material/Typography, @mui/material/Divider, @mui/material/IconButton, @mui/icons-material/Menu, @mui/icons-material/ChevronLeft, @mui/icons-material/ChevronRight, @mui/material/ListItem, @mui/material/ListItemButton, @mui/material/ListItemIcon, @mui/material/ListItemText, @mui/icons-material/Dashboard, @mui/icons-material/ModelTraining, @mui/icons-material/CalendarMonth, @mui/icons-material/ViewKanban, recharts, @mui/icons-material/FlashOn, @mui/icons-material/Speed, @mui/icons-material/Save, @dnd-kit/core, @dnd-kit/sortable, @dnd-kit/utilities
+3:10:13 PM [vite] (client) ✨ optimized dependencies changed. reloading
